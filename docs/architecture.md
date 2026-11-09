@@ -83,4 +83,41 @@ The `withTimeout` utility is designed for critical layers across the modular mon
 - **External Webhooks & Notifications (`NotificationService` / Background Workers):**
   Ensures background worker jobs that push notifications or receipts don't stall queues when external servers experience downtime.
 
+---
+
+## 6. Technology Choices & Type Strategy
+
+### 1. Why We Chose TypeScript
+- **Compile-Time Type Safety:** E-commerce and inventory workflows involve multi-step state transitions, monetary calculations, and inventory reservations. TypeScript detects mismatches and illegal state access during development rather than during live user checkouts.
+- **Explicit Domain Contracts:** Interfaces and types serve as living, compiler-verified documentation across the layered architecture (`Routes` → `Controllers` → `Services` → `Repositories`).
+- **Refactoring Confidence:** Large codebases evolve rapidly. TypeScript allows renaming domain properties, restructuring service signatures, or updating database entities with instant feedback on every affected file across the project.
+- **Enhanced Developer Experience:** Autocompletion, inline documentation, and intelligent code navigation dramatically reduce cognitive overhead and eliminate entire classes of common bugs (e.g., misspelled properties or undefined method calls).
+
+### 2. Why We Chose ESM (ECMAScript Modules)
+- **Official Modern JavaScript Standard:** ESM (`import` / `export`) is the native specification for JavaScript in both modern Node.js runtimes and browser environments, replacing legacy CommonJS (`require` / `module.exports`).
+- **Static Analysis & Tree-Shaking:** ESM syntax is statically analyzable at build time, enabling tooling to eliminate unused code (tree-shaking) and perform faster bundling.
+- **Ecosystem Alignment:** The broader Node.js ecosystem has shifted decisively toward ESM-first and ESM-only packages. Choosing ESM avoids friction with modern libraries and dual-package compatibility hazards.
+- **Standardized Features:** ESM natively supports top-level `await`, unambiguous module boundaries, and standardized path resolution.
+
+### 3. Why Domain Types Are Separated from Controllers and Services
+- **Single Source of Truth:** Core business entities (e.g., `Order`, `Product`, `InventoryItem`, `Money`) define the fundamental rules of the business and must exist independently of HTTP frameworks or database drivers.
+- **Protocol Independence:** Separating domain types ensures that business logic is completely decoupled from transport protocols. The same domain models can be used across HTTP REST controllers, background queue workers, CLI scripts, or potential future protocols (e.g., gRPC, GraphQL) without modification.
+- **Encapsulation & Boundary Isolation:** Controllers deal with HTTP concerns (status codes, headers, raw JSON bodies, query parameters), while Repositories deal with database records. Keeping domain types in a dedicated layer prevents internal database details (e.g., password hashes, internal foreign keys) from leaking into API contracts, and prevents HTTP metadata from polluting business logic.
+- **Reusability & Circular Dependency Prevention:** Centralizing domain contracts in their own layer prevents circular dependencies between controllers, services, and repositories.
+
+### 4. What TypeScript Catches at Compile Time
+TypeScript acts as an automated static verification layer, catching the following errors prior to execution:
+- **Type Mismatches:** Passing an incompatible type (e.g., providing a `string` where a numeric `price` or a `Date` is required).
+- **Missing or Extra Properties:** Constructing objects with missing required fields or misspelled keys.
+- **Property Typos & Undefined Access:** Calling non-existent methods or reading properties that do not exist on the type.
+- **Null and Undefined Dereferencing:** With `strictNullChecks` enabled, TypeScript flags potential crashes from attempting to access properties on `null` or `undefined` values.
+- **Exhaustiveness & Unhandled State Invariants:** Flags unhandled branches in `switch` or `if` statements when handling domain enums (e.g., failing to handle `CANCELLED` in order status state machines).
+- **Function Signature Mismatches:** Calling functions with incorrect argument counts, invalid argument types, or handling return types incorrectly.
+
+### 5. Why Runtime Validation Remains Essential
+While TypeScript provides comprehensive compile-time guarantees, it does not replace runtime validation:
+- **Type Erasure:** TypeScript types exist solely during compilation and are completely removed when transpiled to JavaScript. At runtime, pure JavaScript executes with zero innate knowledge of TypeScript types.
+- **Untrusted External Boundaries:** API endpoints receive arbitrary, unverified JSON payloads over the network from external clients. TypeScript cannot prevent a client from submitting malformed payloads, out-of-range values (e.g., negative quantity, non-UUID product IDs), or malicious injection attacks.
+- **Contract Enforcement at the Edge:** Runtime validation (using schema validators such as Zod or Joi) inspects incoming payloads at the boundary (middleware/controller level). It validates constraints that the type system alone cannot verify (e.g., string length, email format, positive integers, regex patterns), rejects invalid input with descriptive 400 Bad Request responses, and safely casts parsed data into validated TypeScript domain types before it reaches the core services.
+
 

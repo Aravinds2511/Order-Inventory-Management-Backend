@@ -1,0 +1,1 @@
+console.log("Order & Inventory API foundation ready");
