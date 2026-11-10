@@ -10,7 +10,10 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "noUncheckedIndexedAccess": true,
-        "exactOptionalPropertyTypes": true
+        "exactOptionalPropertyTypes": true,
+        "types": [
+            "node"
+        ]
     },
     "include": [
         "src/**/*.ts"

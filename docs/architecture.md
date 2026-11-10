@@ -120,4 +120,45 @@ While TypeScript provides comprehensive compile-time guarantees, it does not rep
 - **Untrusted External Boundaries:** API endpoints receive arbitrary, unverified JSON payloads over the network from external clients. TypeScript cannot prevent a client from submitting malformed payloads, out-of-range values (e.g., negative quantity, non-UUID product IDs), or malicious injection attacks.
 - **Contract Enforcement at the Edge:** Runtime validation (using schema validators such as Zod or Joi) inspects incoming payloads at the boundary (middleware/controller level). It validates constraints that the type system alone cannot verify (e.g., string length, email format, positive integers, regex patterns), rejects invalid input with descriptive 400 Bad Request responses, and safely casts parsed data into validated TypeScript domain types before it reaches the core services.
 
+---
+
+## 7. Event Bus Architecture & Production Limitations (`EventEmitter`)
+
+The application introduces an event-driven mechanism (`OrderEventBus`) built atop Node.js's native `EventEmitter` to decouple domain side-effects (e.g., local logging, analytics, audit tracking) from core transactional order workflows. While `EventEmitter` is lightweight, zero-dependency, and strictly typed with TypeScript, it has critical architectural constraints in production environments:
+
+### 1. In-Memory Operation
+- Node.js's `EventEmitter` operates strictly within the memory heap of a single Node.js process.
+- Events published on one server instance or container replica are completely invisible to other instances in a horizontal multi-replica or clustered deployment. It cannot distribute load across independent consumer instances.
+
+### 2. Synchronous Execution Model
+- When `emitter.emit(event, payload)` is called, `EventEmitter` invokes registered listeners **synchronously and in registration order**.
+- If any listener performs heavy CPU computation or blocks the event loop, the entire calling workflow (including the HTTP request thread) is blocked until that listener returns.
+- Even when listeners return Promises (async functions), `emit()` does not await those promises—it returns `true` or `false` immediately after scheduling their initial tick.
+
+### 3. Ephemeral State & Process Restarts
+- In-memory events have no persistence or disk backing.
+- If the Node.js process crashes, encounters an unhandled exception, or restarts during a deployment or auto-scaling event, all pending in-flight events or asynchronous operations scheduled by event listeners are permanently lost.
+
+### 4. Asynchronous Listener Failures & Error Handling
+- By default, `EventEmitter` does not await asynchronous listeners (`async (payload) => { ... }`).
+- If an asynchronous listener rejects or throws an unhandled error inside a promise:
+  - The error does not propagate back to the caller of `emit()`.
+  - In modern Node.js, an unhandled rejection in a detached promise triggers an `unhandledRejection` event and may terminate the Node.js process if unhandled.
+  - Asynchronous event listeners must implement explicit `try/catch` blocks, logging, and error boundaries internally.
+
+### 5. Lack of Durable Delivery, Acknowledgments, and Retries
+- `EventEmitter` is a "fire-and-forget" pub/sub primitive.
+- It does not support consumer acknowledgments (ACK/NACK), dead-letter queues (DLQ), delivery guarantees (at-least-once or exactly-once), backoff retries, or rate limiting.
+- If a downstream dependency (e.g., email service provider or webhook destination) is temporarily down, the event fails silently and is never retried.
+
+### 6. When to Use a Message Queue (Production Readiness)
+For mission-critical background jobs, distributed events, and resilient decoupled architecture, a dedicated distributed message broker / queue (such as Redis BullMQ, RabbitMQ, Kafka, or AWS SQS) is required:
+- **Durability:** Events are persisted to disk or external memory stores until explicit worker acknowledgment.
+- **Retry Mechanisms:** Exponential backoff, jitter, and dead-letter queues handle transient third-party outages gracefully.
+- **Horizontal Scalability:** Multiple worker processes or containers consume from the same queue, balancing load and preventing service degradation.
+- **Observability:** Provides queue length monitoring, failed job inspection, retry mechanisms, and distributed tracing.
+
+*Recommendation for Order & Inventory API:* Use `OrderEventBus` for local, non-critical, in-process notifications (such as audit logging, metrics dispatch, and local caching triggers), while delegating transactional side-effects (payment settlements, inventory reconciliation, customer email receipts, warehouse fulfillment dispatch) to a distributed queue like BullMQ powered by Redis.
+
+
 
