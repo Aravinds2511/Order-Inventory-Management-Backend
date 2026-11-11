@@ -1,17 +1,21 @@
-import "./events/order-event-handlers.js";
+import { loadConfig } from "./config/env.js";
 
-import { orderEventBus } from "./events/order-event-bus.js";
+import { registerShutdownHandlers } from "./lifecycle/shutdown.js";
 
-orderEventBus.emit("order.cancelled", {
-    orderId: "ORD001",
-    userId: "USER001",
-    reason: "Order not fulfilled",
-    occurredAt: new Date()
+const config = loadConfig();
+
+console.log("Application configuration loaded:", {
+    nodeEnv: config.nodeEnv,
+    port: config.port,
+    logLevel: config.logLevel
 });
 
-orderEventBus.emit("order.cancelled", {
-    orderId: "ORD002",
-    userId: "USER001",
-    reason: "Order not fulfilled",
-    occurredAt: new Date()
+registerShutdownHandlers(async (signal) => {
+    console.log(`Received ${signal}. Starting shutdown...`);
+
+    // Database, Redis and server cleanup will be added later.
+
+    console.log("Cleanup completed.");
 });
+
+console.log("Application bootstrap completed.");
