@@ -1,21 +1,25 @@
 import { loadConfig } from "./config/env.js";
-
 import { registerShutdownHandlers } from "./lifecycle/shutdown.js";
+import { createHttpServer } from "./server/server.js";
 
 const config = loadConfig();
+const server = createHttpServer();
 
-console.log("Application configuration loaded:", {
-    nodeEnv: config.nodeEnv,
-    port: config.port,
-    logLevel: config.logLevel
+server.listen(config.port, () => {
+    console.log(`Server listening on port ${config.port}`);
 });
 
 registerShutdownHandlers(async (signal) => {
-    console.log(`Received ${signal}. Starting shutdown...`);
+    console.log(`Received ${signal}. Gracefully shutting down HTTP server...`);
 
-    // Database, Redis and server cleanup will be added later.
+    await new Promise<void>((resolve, reject) => {
+        server.close((err) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve();
+        });
+    });
 
-    console.log("Cleanup completed.");
+    console.log("HTTP server closed cleanly.");
 });
-
-console.log("Application bootstrap completed.");

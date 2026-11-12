@@ -33,3 +33,47 @@ export class ConfigurationError extends AppError {
         }
     }
 }
+
+export class HttpError extends AppError {
+    public readonly statusCode: number;
+
+    constructor(
+        statusCode: number,
+        message: string,
+        code: string,
+        options?: ErrorOptions
+    ) {
+        super(message, code, options);
+        this.statusCode = statusCode;
+    }
+}
+
+export class NotFoundError extends HttpError {
+    constructor(
+        message: string = "Resource not found",
+        code: string = "NOT_FOUND",
+        options?: ErrorOptions
+    ) {
+        super(404, message, code, options);
+    }
+}
+
+export class MethodNotAllowedError extends HttpError {
+    public readonly allowedMethods: readonly string[];
+
+    constructor(
+        allowedMethods: readonly string[],
+        message?: string,
+        code: string = "METHOD_NOT_ALLOWED",
+        options?: ErrorOptions
+    ) {
+        const allowed = allowedMethods.join(", ");
+        super(
+            405,
+            message ?? `Method not allowed. Supported methods: ${allowed}`,
+            code,
+            options
+        );
+        this.allowedMethods = allowedMethods;
+    }
+}
