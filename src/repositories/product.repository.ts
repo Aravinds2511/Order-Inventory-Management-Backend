@@ -1,26 +1,22 @@
-import type { Product } from "../domain/order.js";
-
-const products: Product[] = [
-    {
-        id: "P001",
-        name: "Laptop",
-        priceInPaise: 500000,
-        isActive: true
-    },
-    {
-        id: "P002",
-        name: "Keyboard",
-        priceInPaise: 25000,
-        isActive: true
-    }
-];
+import { prisma } from "../db/prisma.js";
 
 export class ProductRepository {
-    findAll(): Product[] {
-        return products;
+    async findAll() {
+        return prisma.product.findMany({
+            where: {
+                isActive: true
+            },
+            orderBy: {
+                createdAt: "desc"
+            }
+        });
     }
 
-    findById(id: string): Product | undefined {
-        return products.find(product => product.id === id);
+    async findById(id: string) {
+        return prisma.product.findUnique({
+            where: {
+                id
+            }
+        });
     }
 }

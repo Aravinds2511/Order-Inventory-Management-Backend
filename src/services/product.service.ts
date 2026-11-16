@@ -6,12 +6,12 @@ export class ProductService {
         private readonly repository = new ProductRepository()
     ) { }
 
-    getAllProducts() {
+    async getAllProducts() {
         return this.repository.findAll();
     }
 
-    getProductById(id: string) {
-        const product = this.repository.findById(id);
+    async getProductById(id: string) {
+        const product = await this.repository.findById(id);
 
         if (!product) {
             throw new HttpError(
