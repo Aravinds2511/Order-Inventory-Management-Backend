@@ -3,6 +3,19 @@ import "dotenv/config";
 import { prisma } from "../src/db/prisma.js";
 
 async function main() {
+    await prisma.user.upsert({
+        where: {
+            email: "test.customer@example.com"
+        },
+        update: {},
+        create: {
+            id: "test-user-001",
+            email: "test.customer@example.com",
+            passwordHash: "dummy-hash-for-local-testing",
+            role: "CUSTOMER"
+        }
+    });
+
     await prisma.product.upsert({
         where: {
             sku: "LAPTOP-001"
