@@ -1,5 +1,6 @@
 import express from "express";
 
+import authRouter from "./routes/auth.routes.js";
 import productRouter from "./routes/product.routes.js";
 import orderRouter from "./routes/order.routes.js";
 
@@ -23,16 +24,19 @@ app.get("/health", (_req, res) => {
     });
 });
 
-// 4. Product routes
+// 4. Auth routes
+app.use("/api/v1/auth", authRouter);
+
+// 5. Product routes
 app.use("/api/v1/products", productRouter);
 
-// 5. Order routes
+// 6. Order routes
 app.use("/api/v1/orders", orderRouter);
 
-// 6. Handle unknown routes
+// 7. Handle unknown routes
 app.use(notFoundHandler);
 
-// 7. Centralized error handler
+// 8. Centralized error handler
 app.use(errorHandler);
 
 export default app;

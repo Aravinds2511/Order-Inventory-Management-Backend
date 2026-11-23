@@ -1,5 +1,6 @@
 import { ProductRepository } from "../repositories/product.repository.js";
 import { HttpError } from "../errors/http-error.js";
+import type { CreateProductInput } from "../validation/product.schema.js";
 
 export class ProductService {
     constructor(
@@ -22,6 +23,20 @@ export class ProductService {
         }
 
         return product;
+    }
+
+    async createProduct(input: CreateProductInput) {
+        const existing = await this.repository.findBySku(input.sku);
+
+        if (existing) {
+            throw new HttpError(
+                `Product with SKU '${input.sku}' already exists`,
+                "SKU_ALREADY_EXISTS",
+                409
+            );
+        }
+
+        return this.repository.create(input);
     }
 }
 

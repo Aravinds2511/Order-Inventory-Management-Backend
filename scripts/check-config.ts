@@ -5,7 +5,11 @@ import { loadConfig } from "../src/config/env.js";
 assert.deepEqual(loadConfig({}), {
     port: 3000,
     nodeEnv: "development",
-    logLevel: "info"
+    logLevel: "info",
+    jwtSecret: "dev-super-secret-jwt-key-32-chars-long-minimum!",
+    jwtExpiresIn: "15m",
+    refreshTokenExpiresDays: 7,
+    adminRegistrationSecret: "dev-admin-secret-change-in-prod"
 });
 
 assert.equal(
@@ -25,5 +29,12 @@ assert.throws(
     () => loadConfig({ LOG_LEVEL: "verbose" })
 );
 
-console.log("Configuration tests passed.");
+assert.throws(
+    () => loadConfig({ REFRESH_TOKEN_EXPIRES_DAYS: "-1" })
+);
 
+assert.throws(
+    () => loadConfig({ NODE_ENV: "production", JWT_SECRET: "too-short" })
+);
+
+console.log("Configuration tests passed.");

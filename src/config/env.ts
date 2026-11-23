@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { ConfigurationError } from "../errors/app-error.js";
 
 export type NodeEnvironment =
@@ -15,6 +16,10 @@ export interface AppConfig {
     port: number;
     nodeEnv: NodeEnvironment;
     logLevel: LogLevel;
+    jwtSecret: string;
+    jwtExpiresIn: string;
+    refreshTokenExpiresDays: number;
+    adminRegistrationSecret: string;
 }
 
 const VALID_NODE_ENVS: readonly NodeEnvironment[] = ["development", "test", "production"];
@@ -51,9 +56,34 @@ export function loadConfig(
     }
     const logLevel = rawLogLevel as LogLevel;
 
+    // 4. JWT_SECRET validation
+    const jwtSecret = env.JWT_SECRET ?? "dev-super-secret-jwt-key-32-chars-long-minimum!";
+    if (nodeEnv === "production" && jwtSecret.length < 32) {
+        throw new ConfigurationError("JWT_SECRET must be at least 32 characters long in production.");
+    }
+
+    // 5. JWT_EXPIRES_IN (default: 15m)
+    const jwtExpiresIn = env.JWT_EXPIRES_IN ?? "15m";
+
+    // 6. REFRESH_TOKEN_EXPIRES_DAYS (default: 7)
+    const rawRefreshDays = env.REFRESH_TOKEN_EXPIRES_DAYS ?? "7";
+    const refreshTokenExpiresDays = Number(rawRefreshDays);
+    if (!Number.isInteger(refreshTokenExpiresDays) || refreshTokenExpiresDays < 1) {
+        throw new ConfigurationError("REFRESH_TOKEN_EXPIRES_DAYS must be a positive integer.");
+    }
+
+    // 7. ADMIN_REGISTRATION_SECRET
+    const adminRegistrationSecret = env.ADMIN_REGISTRATION_SECRET ?? "dev-admin-secret-change-in-prod";
+
     return {
         port,
         nodeEnv,
         logLevel,
+        jwtSecret,
+        jwtExpiresIn,
+        refreshTokenExpiresDays,
+        adminRegistrationSecret
     };
 }
+
+export const appConfig = loadConfig();
