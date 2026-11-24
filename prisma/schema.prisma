@@ -28,10 +28,26 @@ model User {
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  orders        Order[]
-  refreshTokens RefreshToken[]
+  orders             Order[]
+  refreshTokens      RefreshToken[]
+  idempotencyRecords IdempotencyRecord[]
 
   @@map("users")
+}
+
+model IdempotencyRecord {
+  key          String   @id @db.VarChar(128)
+  userId       String   @map("user_id")
+  endpoint     String   @db.VarChar(255)
+  requestHash  String   @map("request_hash") @db.VarChar(64)
+  statusCode   Int      @map("status_code")
+  responseBody Json     @map("response_body")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("idempotency_records")
 }
 
 model RefreshToken {

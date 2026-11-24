@@ -20,6 +20,8 @@ export interface AppConfig {
     jwtExpiresIn: string;
     refreshTokenExpiresDays: number;
     adminRegistrationSecret: string;
+    redisUrl: string;
+    idempotencyLockTtlSeconds: number;
 }
 
 const VALID_NODE_ENVS: readonly NodeEnvironment[] = ["development", "test", "production"];
@@ -75,6 +77,16 @@ export function loadConfig(
     // 7. ADMIN_REGISTRATION_SECRET
     const adminRegistrationSecret = env.ADMIN_REGISTRATION_SECRET ?? "dev-admin-secret-change-in-prod";
 
+    // 8. REDIS_URL (default: redis://localhost:6379)
+    const redisUrl = env.REDIS_URL ?? "redis://localhost:6379";
+
+    // 9. IDEMPOTENCY_LOCK_TTL_SECONDS (default: 30)
+    const rawLockTtl = env.IDEMPOTENCY_LOCK_TTL_SECONDS ?? "30";
+    const idempotencyLockTtlSeconds = Number(rawLockTtl);
+    if (!Number.isInteger(idempotencyLockTtlSeconds) || idempotencyLockTtlSeconds < 1) {
+        throw new ConfigurationError("IDEMPOTENCY_LOCK_TTL_SECONDS must be a positive integer.");
+    }
+
     return {
         port,
         nodeEnv,
@@ -82,7 +94,9 @@ export function loadConfig(
         jwtSecret,
         jwtExpiresIn,
         refreshTokenExpiresDays,
-        adminRegistrationSecret
+        adminRegistrationSecret,
+        redisUrl,
+        idempotencyLockTtlSeconds
     };
 }
 

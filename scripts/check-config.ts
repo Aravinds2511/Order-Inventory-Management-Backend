@@ -9,12 +9,19 @@ assert.deepEqual(loadConfig({}), {
     jwtSecret: "dev-super-secret-jwt-key-32-chars-long-minimum!",
     jwtExpiresIn: "15m",
     refreshTokenExpiresDays: 7,
-    adminRegistrationSecret: "dev-admin-secret-change-in-prod"
+    adminRegistrationSecret: "dev-admin-secret-change-in-prod",
+    redisUrl: "redis://localhost:6379",
+    idempotencyLockTtlSeconds: 30
 });
 
 assert.equal(
     loadConfig({ PORT: "4000" }).port,
     4000
+);
+
+assert.equal(
+    loadConfig({ REDIS_URL: "redis://custom-host:6380" }).redisUrl,
+    "redis://custom-host:6380"
 );
 
 assert.throws(
@@ -31,6 +38,10 @@ assert.throws(
 
 assert.throws(
     () => loadConfig({ REFRESH_TOKEN_EXPIRES_DAYS: "-1" })
+);
+
+assert.throws(
+    () => loadConfig({ IDEMPOTENCY_LOCK_TTL_SECONDS: "0" })
 );
 
 assert.throws(
